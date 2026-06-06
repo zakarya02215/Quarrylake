@@ -58,25 +58,16 @@ canvas{width:100%;height:100%}
 <div class="card"><div class="card-title">🔔 سجل التنبيهات</div><div id="alerts"><div style="text-align:center;color:#94a3b8;padding:10px;font-size:.8rem">لا توجد تنبيهات...</div></div></div>
 <div style="text-align:center;padding:20px;color:#94a3b8;font-size:.75rem">QuarryLake Pro v2.1 | للتحليل الفني فقط</div>
 <script>
-const PROXIES=['https://api.allorigins.win/raw?url=','https://corsproxy.io/?','https://api.codetabs.com/v1/proxy?quest='];
-const CFG={symbol:'XAUUSDT',tf:'15m',limit:200,ema:200,waeS:150,waeF:20,waeSl:40,waeCh:20,waeM:2,vstopL:3,vstopM:1.5};
-let ST={candles:[],lastSig:null,alerts:[],snd:true,px:0};
+const API_URL = 'https://quarrylake-api.onrender.com';
+const CFG = {symbol: 'XAUUSDT', tf: '15m', limit: 200, ema: 200, waeS: 150, waeF: 20, waeSl: 40, waeCh: 20, waeM: 2, vstopL: 3, vstopM: 1.5};
+let ST = {candles: [], lastSig: null, alerts: [], snd: true};
 
-function ema(s,p){const k=2/(p+1),r=[s[0]];for(let i=1;i<s.length;i++)r.push(s[i]*k+r[i-1]*(1-k));return r}
-function sma(s,p){const r=[];for(let i=0;i<s.length;i++){if(i<p-1){r.push(null);continue}let x=0;for(let j=0;j<p;j++)x+=s[i-j];r.push(x/p)}return r}
-function stdev(s,p){const r=[];for(let i=0;i<s.length;i++){if(i<p-1){r.push(null);continue}let x=0;for(let j=0;j<p;j++)x+=s[i-j];const m=x/p;let v=0;for(let j=0;j<p;j++)v+=Math.pow(s[i-j]-m,2);r.push(Math.sqrt(v/p))}return r}
-function atr(h,l,c,p){const t=[];for(let i=0;i<c.length;i++)t.push(i===0?h[i]-l[i]:Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));return ema(t,p)}
-function rma(s,p){const a=1/p,r=[s[0]];for(let i=1;i<s.length;i++)r.push(a*s[i]+(1-a)*r[i-1]);return r}
-
-async function fetchProxy(u){
- for(let i=0;i<PROXIES.length;i++){
-  const pi=(ST.px+i)%PROXIES.length;
-  try{
-   const r=await fetch(PROXIES[pi]+encodeURIComponent(u),{method:'GET'});
-   if(r.ok){ST.px=pi;return await r.json()}
-  }catch(e){}
- }
- throw new Error('all proxies failed');
+async function fetchProxy(u) {
+    try {
+        const r = await fetch(API_URL + '/api/klines?symbol=' + CFG.symbol + '&interval=' + CFG.tf + '&limit=' + CFG.limit);
+        if (r.ok) return await r.json();
+    } catch (e) {}
+    throw new Error('API failed');
 }
 
 async function fd(){
