@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuarryLake Pro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#0a0e17;color:#f0f4f8;padding:10px}
+.header{background:#111827;border:1px solid #2d3748;padding:12px;border-radius:12px;margin-bottom:12px;display:flex;justify-content:space-between}
+.logo{color:#f59e0b;font-weight:800;font-size:1.2rem}
+.status{font-size:.75rem;color:#94a3b8}
+.card{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:14px;margin-bottom:12px}
+.card-title{font-size:.9rem;font-weight:700;margin-bottom:10px}
+.price-main{font-size:2rem;font-weight:800}
+.price-change{font-size:.9rem;padding:4px 10px;border-radius:6px;display:inline-block;margin-top:4px}
+.up{background:rgba(16,185,129,.15);color:#10b981}
+.down{background:rgba(239,68,68,.15);color:#ef4444}
+.indicator-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #2d3748;font-size:.85rem}
+.indicator-row:last-child{border:none}
+.badge{padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700;min-width:60px;text-align:center}
+.bg-green{background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3)}
+.bg-red{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.bg-neutral{background:rgba(148,163,184,.1);color:#94a3b8;border:1px solid #2d3748}
+.signal-box{border-radius:10px;padding:16px;text-align:center;margin:10px 0}
+.waiting{background:rgba(148,163,184,.08);border:1px solid #2d3748}
+.buy-signal{background:rgba(16,185,129,.1);border:2px solid #10b981}
+.sell-signal{background:rgba(239,68,68,.1);border:2px solid #ef4444}
+.targets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.target{background:#111827;border:1px solid #2d3748;border-radius:8px;padding:10px;text-align:center}
+.target-label{font-size:.7rem;color:#94a3b8}
+.target-val{font-size:1rem;font-weight:700;margin-top:4px}
+.green-text{color:#10b981}
+.red-text{color:#ef4444}
+select{background:#111827;border:1px solid #2d3748;border-radius:8px;padding:8px;color:#f0f4f8;width:100%;margin-top:6px}
+.btn{background:#f59e0b;color:#fff;border:none;padding:8px;border-radius:8px;font-weight:700;width:100%;margin-top:8px;cursor:pointer}
+.pp-box{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:10px;text-align:center;margin:8px 0}
+.pp-val{color:#f59e0b;font-weight:800}
+.alert-item{display:flex;gap:8px;padding:10px;border-radius:8px;margin-bottom:6px;font-size:.8rem}
+.alert-buy{background:rgba(16,185,129,.1);border-right:3px solid #10b981}
+.alert-sell{background:rgba(239,68,68,.1);border-right:3px solid #ef4444}
+.chart-container{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;height:200px;overflow:hidden}
+canvas{width:100%;height:100%}
+.loading{display:inline-block;width:12px;height:12px;border:2px solid #2d3748;border-top-color:#f59e0b;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error{background:rgba(239,68,68,.1);border:1px solid #ef4444;border-radius:8px;padding:10px;margin:10px 0;text-align:center;font-size:.8rem}
+.retry{background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;margin-top:6px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="header"><div class="logo">🎯 QuarryLake Pro</div><div class="status" id="conn"><span class="loading"></span> جاري...</div></div>
+<div class="card"><div class="card-title">🥇 <span id="sym">XAUUSDT - الذهب</span></div><div class="price-main" id="price">----.--</div><div class="price-change" id="chg">--%</div><div style="font-size:.75rem;color:#94a3b8;margin-top:6px">📈 <span id="hi">----</span> 📉 <span id="lo">----</span> 🕐 <span id="tm">--:--</span></div></div>
+<div class="card"><div class="card-title">🎯 إشارة الدخول</div><div class="signal-box waiting" id="box"><div style="font-size:2rem">⏳</div><div style="font-size:1.2rem;font-weight:800">في انتظار الإشارة...</div></div><div class="targets" id="tgs" style="display:none"><div class="target"><div class="target-label">🎯 الهدف 1</div><div class="target-val" id="tp1">----</div></div><div class="target"><div class="target-label">🎯 الهدف 2</div><div class="target-val" id="tp2">----</div></div></div></div>
+<div class="card"><div class="card-title">📊 حالة المؤشرات</div><div class="indicator-row"><span>WAE القائد</span><span class="badge bg-neutral" id="wae">انتظار</span></div><div class="indicator-row"><span>VStop التأكيد</span><span class="badge bg-neutral" id="vst">انتظار</span></div><div class="indicator-row"><span>PP المحور</span><div><span style="color:#f59e0b;font-weight:700" id="ppv">----</span> <span class="badge bg-neutral" id="ppb">--</span></div></div><div class="indicator-row"><span>EMA 200</span><div><span style="color:#3b82f6;font-weight:700" id="emav">----</span> <span class="badge bg-neutral" id="emab">--</span></div></div></div>
+<div class="card"><div class="card-title">⚙️ الإعدادات</div><select id="symSel" onchange="cs()"><option value="XAUUSDT">🥇 XAUUSDT (ذهب)</option><option value="XAGUSDT">🥈 XAGUSDT (فضة)</option></select><select id="tfSel" onchange="ct()"><option value="5m">5 دقائق</option><option value="15m" selected>15 دقيقة</option><option value="1h">1 ساعة</option><option value="4h">4 ساعات</option></select><button class="btn" onclick="ts()">🔊 اختبار الصوت</button><button class="btn" onclick="mr()" style="background:#3b82f6;margin-top:6px">🔄 تحديث يدوي</button></div>
+<div class="card"><div class="card-title">📐 مستويات اليوم</div><div class="pp-box"><div style="font-size:.75rem">⭐ PP</div><div class="pp-val" id="pps">----</div></div><div class="indicator-row"><span style="color:#10b981">🟢 R1</span><span style="color:#10b981;font-weight:700" id="r1">----</span></div><div class="indicator-row"><span style="color:#10b981">🟢 R2</span><span style="color:#10b981;font-weight:700" id="r2">----</span></div><div class="indicator-row"><span style="color:#ef4444">🔴 S1</span><span style="color:#ef4444;font-weight:700" id="s1">----</span></div><div class="indicator-row"><span style="color:#ef4444">🔴 S2</span><span style="color:#ef4444;font-weight:700" id="s2">----</span></div></div>
+<div class="card"><div class="card-title">📈 الشارت</div><div class="chart-container"><canvas id="ch"></canvas></div></div>
+<div class="card"><div class="card-title">🔔 سجل التنبيهات</div><div id="alerts"><div style="text-align:center;color:#94a3b8;padding:10px;font-size:.8rem">لا توجد تنبيهات...</div></div></div>
+<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.75rem">QuarryLake Pro v2.1 | للتحليل الفني فقط</div>
+<script>
+const PROXIES=['https://api.allorigins.win/raw?url=','https://corsproxy.io/?','https://api.codetabs.com/v1/proxy?quest='];
+const CFG={symbol:'XAUUSDT',tf:'15m',limit:200,ema:200,waeS:150,waeF:20,waeSl:40,waeCh:20,waeM:2,vstopL:3,vstopM:1.5};
+let ST={candles:[],lastSig:null,alerts:[],snd:true,px:0};
+
+function ema(s,p){const k=2/(p+1),r=[s[0]];for(let i=1;i<s.length;i++)r.push(s[i]*k+r[i-1]*(1-k));return r}
+function sma(s,p){const r=[];for(let i=0;i<s.length;i++){if(i<p-1){r.push(null);continue}let x=0;for(let j=0;j<p;j++)x+=s[i-j];r.push(x/p)}return r}
+function stdev(s,p){const r=[];for(let i=0;i<s.length;i++){if(i<p-1){r.push(null);continue}let x=0;for(let j=0;j<p;j++)x+=s[i-j];const m=x/p;let v=0;for(let j=0;j<p;j++)v+=Math.pow(s[i-j]-m,2);r.push(Math.sqrt(v/p))}return r}
+function atr(h,l,c,p){const t=[];for(let i=0;i<c.length;i++)t.push(i===0?h[i]-l[i]:Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));return ema(t,p)}
+function rma(s,p){const a=1/p,r=[s[0]];for(let i=1;i<s.length;i++)r.push(a*s[i]+(1-a)*r[i-1]);return r}
+
+async function fetchProxy(u){
+ for(let i=0;i<PROXIES.length;i++){
+  const pi=(ST.px+i)%PROXIES.length;
+  try{
+   const r=await fetch(PROXIES[pi]+encodeURIComponent(u),{method:'GET'});
+   if(r.ok){ST.px=pi;return await r.json()}
+  }catch(e){}
+ }
+ throw new Error('all proxies failed');
+}
+
+async function fd(){
+ const el=document.getElementById('conn');
+ el.innerHTML='<span class="loading"></span> جاري...';
+ try{
+  const d=await fetchProxy('https://api.binance.com/api/v3/klines?symbol='+CFG.symbol+'&interval='+CFG.tf+'&limit='+CFG.limit);
+  ST.candles=d.map(c=>({t:c[0],o:parseFloat(c[1]),h:parseFloat(c[2]),l:parseFloat(c[3]),c:parseFloat(c[4]),v:parseFloat(c[5])}));
+  el.innerHTML='<span style="color:#10b981">● متصل</span>';
+  const er=document.querySelector('.error');if(er)er.remove();
+  return true;
+ }catch(e){
+  el.innerHTML='<span style="color:#ef4444">● غير متصل</span>';
+  const ex=document.querySelector('.error');
+  if(!ex){
+   const b=document.createElement('div');b.className='error';b.innerHTML='فشل الاتصال بـ Binance.<br><button class="retry" onclick="mr()">إعادة المحاولة</button>';document.body.insertBefore(b,document.body.children[1]);
+  }
+  return false;
+ }
+}
+
+function cw(cd){
+ const cl=cd.map(x=>x.c),hi=cd.map(x=>x.h),lo=cd.map(x=>x.l);
+ const fma=ema(cl,CFG.waeF),sma_=ema(cl,CFG.waeSl),macd=fma.map((v,i)=>v-sma_[i]);
+ const t1=[],t2=[];for(let i=0;i<macd.length;i++){t1.push(i>=1?(macd[i]-macd[i-1])*CFG.waeS:0);t2.push(i>=3?(macd[i-2]-macd[i-3])*CFG.waeS:0)}
+ const sm=sma(cl,CFG.waeCh),sd=stdev(cl,CFG.waeCh),bbu=sm.map((v,i)=>v!==null?v+CFG.waeM*sd[i]:null),bbl=sm.map((v,i)=>v!==null?v-CFG.waeM*sd[i]:null),e1=bbu.map((v,i)=>v!==null&&bbl[i]!==null?v-bbl[i]:null);
+ const tr=[];for(let i=0;i<cl.length;i++)tr.push(i===0?hi[i]-lo[i]:Math.max(hi[i]-lo[i],Math.abs(hi[i]-cl[i-1]),Math.abs(lo[i]-cl[i-1])));
+ const dz=rma(tr,100).map(v=>v*3.7);
+ const tu=t1.map(v=>v>=0?v:0),td=t1.map(v=>v<0?-v:0);
+ const wl=[],ws=[];for(let i=0;i<tu.length;i++){wl.push(tu[i]>0&&tu[i]>dz[i]&&tu[i]>(e1[i]||0));ws.push(td[i]>0&&td[i]>dz[i]&&td[i]>(e1[i]||0))}
+ return{t1,tu,td,wl,ws};
+}
+
+function cv(cd){
+ const cl=cd.map(x=>x.c),hi=cd.map(x=>x.h),lo=cd.map(x=>x.l),at=atr(hi,lo,cl,CFG.vstopL);
+ const m1=[],mn1=[],iu=[],st=[],vs=[];
+ for(let i=0;i<cl.length;i++){
+  if(i===0){m1.push(cl[i]);mn1.push(cl[i]);iu.push(true);st.push(cl[i]-CFG.vstopM*at[i]);vs.push(st[i])}
+  else{
+   m1.push(Math.max(m1[i-1]||cl[i],cl[i]));mn1.push(Math.min(mn1[i-1]||cl[i],cl[i]));
+   const pu=iu[i-1],cs=pu?m1[i]-CFG.vstopM*at[i]:mn1[i]+CFG.vstopM*at[i];
+   const pv=vs[i-1],v1=pu?Math.max(pv,cs):Math.min(pv,cs);
+   const cu=cl[i]-v1>=0,tc=cu!==pu;
+   iu.push(cu);st.push(cs);
+   vs.push(tc?(cu?cl[i]-CFG.vstopM*at[i]:cl[i]+CFG.vstopM*at[i]):v1);
+  }
+ }
+ const vl=cl.map((c,i)=>c>vs[i]),vsh=cl.map((c,i)=>c<vs[i]);
+ return{vs,iu,vl,vsh};
+}
+
+function cpp(cd){
+ const d=cd.slice(-96);if(d.length<2){const lc=cd[cd.length-1];return{pp:lc.c,r1:lc.c*1.001,r2:lc.c*1.002,s1:lc.c*0.999,s2:lc.c*0.998}}
+ const xh=Math.max(...d.map(x=>x.h)),xl=Math.min(...d.map(x=>x.l)),xc=d[d.length-1].c;
+ const pp=(xh+xl+xc)/3,r1=pp+(pp-xl),s1=pp-(xh-pp),r2=pp+(xh-xl),s2=pp-(xh-xl);
+ return{pp,r1,r2,s1,s2};
+}
+
+function csig(cd,w,v,pp,ema){
+ const i=cd.length-1,p=i-1;if(i<5)return null;
+ const pr=cd[i].c,emaV=ema[i];
+ const wln=w.wl[i],wsn=w.ws[i],vln=v.vl[i],vsn=v.vsh[i];
+ const wlp=w.wl[p],wsp=w.ws[p],vlp=v.vl[p],vsp=v.vsh[p];
+ const abpp=pr>pp.pp,bepp=pr<pp.pp,abem=pr>emaV,bee=pr<emaV;
+ if(wln&&vln&&abpp&&abem&&(!wlp||!vlp))return{type:'buy',price:pr,tp1:pp.r1,tp2:pp.r2,msg:'شراء: WAE+VStop+PP+EMA200'};
+ if(wsn&&vsn&&bepp&&bee&&(!wsp||!vsp))return{type:'sell',price:pr,tp1:pp.s1,tp2:pp.s2,msg:'بيع: WAE+VStop+PP+EMA200'};
+ return null;
+}
+
+let audioCtx;
+function ps(t){
+ if(!ST.snd)return;
+ if(!audioCtx)audioCtx=new(window.AudioContext||webkitAudioContext)();
+ const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+ o.connect(g);g.connect(audioCtx.destination);
+ if(t==='buy'){o.frequency.setValueAtTime(800,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(1200,audioCtx.currentTime+0.1);o.frequency.exponentialRampToValueAtTime(800,audioCtx.currentTime+0.2)}
+ else{o.frequency.setValueAtTime(600,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(400,audioCtx.currentTime+0.1);o.frequency.exponentialRampToValueAtTime(600,audioCtx.currentTime+0.2)}
+ g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.4);
+ o.start();o.stop(audioCtx.currentTime+0.4);
+}
+
+function ts(){ps('buy');setTimeout(()=>ps('sell'),500)}
+
+function aa(s){
+ const now=new Date().toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+ ST.alerts.unshift({type:s.type,time:now,price:s.price.toFixed(2),msg:s.msg});
+ if(ST.alerts.length>15)ST.alerts.pop();
+ const box=document.getElementById('alerts');
+ box.innerHTML=ST.alerts.map(a=>'<div class="alert-item alert-'+a.type+'"><div style="font-size:1.1rem">'+(a.type==='buy'?'🚀':'🔻')+'</div><div style="flex:1"><div style="font-weight:700">'+(a.type==='buy'?'شراء':'بيع')+' @ '+a.price+'</div><div style="font-size:0.7rem;opacity:0.8">'+a.msg+'</div></div><div style="font-size:0.65rem;color:#94a3b8">'+a.time+'</div></div>').join('');
+}
+
+function dc(cd,pp,ema){
+ const c=document.getElementById('ch'),x=c.getContext('2d');
+ const w=c.width=c.offsetWidth,h=c.height=c.offsetHeight;
+ x.fillStyle='#1a1f2e';x.fillRect(0,0,w,h);
+ const vis=cd.slice(-50);if(vis.length<2)return;
+ let mn=Math.min(...vis.map(v=>v.l)),mx=Math.max(...vis.map(v=>v.h));
+ const pd=(mx-mn)*0.1;mn-=pd;mx+=pd;const rng=mx-mn;
+ const cw=w/vis.length*0.6,sp=w/vis.length;
+ x.strokeStyle='#2d3748';x.lineWidth=0.5;
+ for(let i=0;i<5;i++){const y=h-(h*i/4);x.beginPath();x.moveTo(0,y);x.lineTo(w,y);x.stroke();x.fillStyle='#94a3b8';x.font='10px sans-serif';x.fillText((mn+rng*i/4).toFixed(1),5,y-3)}
+ x.strokeStyle='#3b82f6';x.lineWidth=2;x.beginPath();
+ for(let i=0;i<vis.length;i++){const ev=ema[cd.length-vis.length+i];if(ev===null)continue;const px=i*sp+sp/2,py=h-((ev-mn)/rng)*h;if(i===0)x.moveTo(px,py);else x.lineTo(px,py)}
+ x.stroke();
+ const ppy=h-((pp.pp-mn)/rng)*h;x.strokeStyle='#f59e0b';x.lineWidth=1;x.setLineDash([4,4]);x.beginPath();x.moveTo(0,ppy);x.lineTo(w,ppy);x.stroke();x.setLineDash([]);
+ for(let i=0;i<vis.length;i++){
+  const cd=vis[i],px=i*sp+sp/2;
+  const oy=h-((cd.o-mn)/rng)*h,cy=h-((cd.c-mn)/rng)*h,hy=h-((cd.h-mn)/rng)*h,ly=h-((cd.l-mn)/rng)*h;
+  const gr=cd.c>=cd.o;x.strokeStyle=x.fillStyle=gr?'#10b981':'#ef4444';
+  x.beginPath();x.moveTo(px,hy);x.lineTo(px,ly);x.stroke();
+  const bt=Math.min(oy,cy),bh=Math.abs(cy-oy);x.fillRect(px-cw/2,bt,cw,Math.max(bh,1));
+ }
+}
+
+function up(){
+ const cd=ST.candles;if(!cd.length)return;
+ const last=cd[cd.length-1],prev=cd[cd.length-2]||last;
+ document.getElementById('price').textContent=last.c.toFixed(2);
+ const chg=((last.c-prev.c)/prev.c*100);
+ const chgEl=document.getElementById('chg');chgEl.textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';chgEl.className='price-change '+(chg>=0?'up':'down');
+ document.getElementById('hi').textContent=last.h.toFixed(2);document.getElementById('lo').textContent=last.l.toFixed(2);
+ document.getElementById('tm').textContent=new Date().toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});
+ const w=cw(cd),v=cv(cd),pp=cpp(cd),ema=ema(cd.map(x=>x.c),CFG.ema);
+ const i=cd.length-1;
+ const wb=document.getElementById('wae');if(w.wl[i]){wb.textContent='شراء';wb.className='badge bg-green'}else if(w.ws[i]){wb.textContent='بيع';wb.className='badge bg-red'}else{wb.textContent='انتظار';wb.className='badge bg-neutral'}
+ const vb=document.getElementById('vst');if(v.vl[i]){vb.textContent='صاعد';vb.className='badge bg-green'}else if(v.vsh[i]){vb.textContent='هابط';vb.className='badge bg-red'}else{vb.textContent='انتظار';vb.className='badge bg-neutral'}
+ document.getElementById('ppv').textContent=pp.pp.toFixed(2);document.getElementById('pps').textContent=pp.pp.toFixed(2);
+ const pb=document.getElementById('ppb');pb.textContent=last.c>pp.pp?'فوق ✅':'تحت ❌';pb.className='badge '+(last.c>pp.pp?'bg-green':'bg-red');
+ document.getElementById('emav').textContent=ema[i].toFixed(2);
+ const eb=document.getElementById('emab');eb.textContent=last.c>ema[i]?'فوق ✅':'تحت ❌';eb.className='badge '+(last.c>ema[i]?'bg-green':'bg-red');
+ document.getElementById('r1').textContent=pp.r1.toFixed(2);document.getElementById('r2').textContent=pp.r2.toFixed(2);
+ document.getElementById('s1').textContent=pp.s1.toFixed(2);document.getElementById('s2').textContent=pp.s2.toFixed(2);
+ const sig=csig(cd,w,v,pp,ema);
+ const box=document.getElementById('box'),tgs=document.getElementById('tgs');
+ if(sig&&sig.type!==ST.lastSig){
+  ST.lastSig=sig.type;ps(sig.type);aa(sig);
+  if(sig.type==='buy'){
+   box.className='signal-box buy-signal';box.innerHTML='<div style="font-size:2.5rem">🚀</div><div style="font-size:1.3rem;font-weight:800;color:#10b981">إشارة شراء!</div>';
+   document.getElementById('tp1').textContent=sig.tp1.toFixed(2);document.getElementById('tp2').textContent=sig.tp2.toFixed(2);
+   document.getElementById('tp1').className='target-val green-text';document.getElementById('tp2').className='target-val green-text';
+   tgs.style.display='grid';
+  }else{
+   box.className='signal-box sell-signal';box.innerHTML='<div style="font-size:2.5rem">🔻</div><div style="font-size:1.3rem;font-weight:800;color:#ef4444">إشارة بيع!</div>';
+   document.getElementById('tp1').textContent=sig.tp1.toFixed(2);document.getElementById('tp2').textContent=sig.tp2.toFixed(2);
+   document.getElementById('tp1').className='target-val red-text';document.getElementById('tp2').className='target-val red-text';
+   tgs.style.display='grid';
+  }
+ }else if(!sig){
+  box.className='signal-box waiting';box.innerHTML='<div style="font-size:2rem">⏳</div><div style="font-size:1.2rem;font-weight:800">في انتظار الإشارة...</div><div style="font-size:0.8rem;color:#94a3b8;margin-top:4px">WAE يقود + VStop يؤكد + كسر PP و EMA200</div>';
+  tgs.style.display='none';
+ }
+ dc(cd,pp,ema);
+ const er=document.querySelector('.error');if(er)er.remove();
+}
+
+function cs(){const s=document.getElementById('symSel').value;CFG.symbol=s;const n={XAUUSDT:['XAUUSDT - الذهب','🥇'],XAGUSDT:['XAGUSDT - الفضة','🥈']};document.getElementById('sym').textContent=n[s][0];ST.lastSig=null;fd().then(()=>up())}
+function ct(){CFG.tf=document.getElementById('tfSel').value;ST.lastSig=null;fd().then(()=>up())}
+async function mr(){ST.px=0;const ok=await fd();if(ok)up()}
+
+async function main(){const ok=await fd();if(ok)up()}
+main();setInterval(main,20000);
+window.addEventListener('resize',()=>{if(ST.candles.length>0){const pp=cpp(ST.candles),ema=ema(ST.candles.map(x=>x.c),CFG.ema);dc(ST.candles,pp,ema)}});
+</script>
+</body>
+</html>
