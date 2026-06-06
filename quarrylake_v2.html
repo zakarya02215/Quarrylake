@@ -1,0 +1,405 @@
+
+# Create a complete solution with a simple Python backend + HTML frontend
+# Since we can't run servers, I'll create files that work together
+
+# First, let's create an enhanced HTML version that uses a CORS proxy
+enhanced_html = '''<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuarryLake Pro</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:system-ui,-apple-system,sans-serif;background:#0a0e17;color:#f0f4f8;min-height:100vh;padding:10px}
+        .header{background:#111827;border-bottom:1px solid #2d3748;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-radius:12px;margin-bottom:12px}
+        .logo{font-size:1.2rem;font-weight:800;color:#f59e0b}
+        .status{font-size:0.75rem;color:#94a3b8}
+        .card{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:14px;margin-bottom:12px}
+        .card-title{font-size:0.9rem;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+        .price-main{font-size:2rem;font-weight:800}
+        .price-change{font-size:0.9rem;padding:4px 10px;border-radius:6px;display:inline-block;margin-top:4px}
+        .up{background:rgba(16,185,129,0.15);color:#10b981}
+        .down{background:rgba(239,68,68,0.15);color:#ef4444}
+        .indicator-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #2d3748;font-size:0.85rem}
+        .indicator-row:last-child{border-bottom:none}
+        .badge{padding:4px 10px;border-radius:6px;font-size:0.75rem;font-weight:700;min-width:70px;text-align:center}
+        .bg-green{background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3)}
+        .bg-red{background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3)}
+        .bg-neutral{background:rgba(148,163,184,0.1);color:#94a3b8;border:1px solid #2d3748}
+        .signal-box{border-radius:10px;padding:16px;text-align:center;margin:10px 0}
+        .waiting{background:rgba(148,163,184,0.08);border:1px solid #2d3748}
+        .buy-signal{background:rgba(16,185,129,0.1);border:2px solid #10b981;animation:pulse 2s infinite}
+        .sell-signal{background:rgba(239,68,68,0.1);border:2px solid #ef4444;animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.8}}
+        .signal-icon{font-size:2.5rem;margin-bottom:6px}
+        .signal-title{font-size:1.3rem;font-weight:800}
+        .targets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+        .target{background:#111827;border:1px solid #2d3748;border-radius:8px;padding:10px;text-align:center}
+        .target-label{font-size:0.7rem;color:#94a3b8}
+        .target-val{font-size:1rem;font-weight:700;margin-top:4px}
+        .green-text{color:#10b981}
+        .red-text{color:#ef4444}
+        select{background:#111827;border:1px solid #2d3748;border-radius:8px;padding:8px 12px;color:#f0f4f8;font-size:0.85rem;width:100%;margin-top:6px}
+        .pp-box{background:rgba(245,158,11,0.1);border-radius:8px;padding:10px;margin:8px 0;text-align:center;border:1px solid rgba(245,158,11,0.3)}
+        .pp-val{color:#f59e0b;font-weight:800;font-size:1.1rem}
+        .alert-item{display:flex;align-items:center;gap:8px;padding:10px;border-radius:8px;margin-bottom:6px;font-size:0.8rem}
+        .alert-buy{background:rgba(16,185,129,0.1);border-right:3px solid #10b981}
+        .alert-sell{background:rgba(239,68,68,0.1);border-right:3px solid #ef4444}
+        .footer{text-align:center;padding:20px;color:#94a3b8;font-size:0.75rem}
+        .chart-container{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;height:250px;position:relative;overflow:hidden;margin-top:10px}
+        canvas{width:100%;height:100%}
+        .btn{background:#f59e0b;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;margin-top:8px}
+        .info-row{display:flex;gap:12px;font-size:0.75rem;color:#94a3b8;margin-top:6px;flex-wrap:wrap}
+        .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin:0 2px}
+        .d-green{background:#10b981}
+        .d-red{background:#ef4444}
+        .d-white{background:#94a3b8;opacity:0.4}
+        .loading{display:inline-block;width:16px;height:16px;border:2px solid #2d3748;border-top-color:#f59e0b;border-radius:50%;animation:spin 1s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .error-box{background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:12px;margin:10px 0;text-align:center;font-size:0.85rem}
+        .retry-btn{background:#ef4444;color:#fff;border:none;padding:6px 12px;border-radius:6px;margin-top:8px;cursor:pointer}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🎯 QuarryLake Pro</div>
+        <div class="status" id="connStatus"><span class="loading"></span> جاري الاتصال...</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🥇 <span id="symName">XAUUSDT - الذهب</span></div>
+        <div class="price-main" id="price">----.--</div>
+        <div class="price-change" id="change">--%</div>
+        <div class="info-row">
+            <span>📈 <span id="high">----</span></span>
+            <span>📉 <span id="low">----</span></span>
+            <span>🕐 <span id="time">--:--</span></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🎯 إشارة الدخول <span id="dots"><span class="dot d-white"></span><span class="dot d-white"></span><span class="dot d-white"></span></span></div>
+        <div class="signal-box waiting" id="sigBox">
+            <div class="signal-icon" id="sigIcon">⏳</div>
+            <div class="signal-title" id="sigTitle">في انتظار الإشارة...</div>
+            <div style="font-size:0.8rem;color:#94a3b8;margin-top:4px">WAE يقود + VStop يؤكد + كسر PP و EMA200</div>
+        </div>
+        <div class="targets" id="targets" style="display:none">
+            <div class="target"><div class="target-label">🎯 الهدف 1</div><div class="target-val" id="tp1">----</div></div>
+            <div class="target"><div class="target-label">🎯 الهدف 2</div><div class="target-val" id="tp2">----</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📊 حالة المؤشرات</div>
+        <div class="indicator-row"><span>WAE (-2.000) <small style="color:#94a3b8">القائد</small></span><span class="badge bg-neutral" id="waeBadge">انتظار</span></div>
+        <div class="indicator-row"><span>VStop (-1.000) <small style="color:#94a3b8">التأكيد</small></span><span class="badge bg-neutral" id="vstopBadge">انتظار</span></div>
+        <div class="indicator-row"><span>PP (0.000) <small style="color:#94a3b8">المحور</small></span><div><span style="color:#f59e0b;font-weight:700" id="ppVal">----</span> <span class="badge bg-neutral" id="ppBadge">--</span></div></div>
+        <div class="indicator-row"><span>EMA 200 <small style="color:#94a3b8">الاتجاه</small></span><div><span style="color:#3b82f6;font-weight:700" id="emaVal">----</span> <span class="badge bg-neutral" id="emaBadge">--</span></div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">⚙️ الإعدادات</div>
+        <select id="symbol" onchange="chgSym()">
+            <option value="XAUUSDT">🥇 XAUUSDT (ذهب)</option>
+            <option value="XAGUSDT">🥈 XAGUSDT (فضة)</option>
+        </select>
+        <select id="tf" onchange="chgTf()">
+            <option value="5m">5 دقائق</option>
+            <option value="15m" selected>15 دقيقة</option>
+            <option value="1h">1 ساعة</option>
+            <option value="4h">4 ساعات</option>
+        </select>
+        <button class="btn" onclick="testSound()">🔊 اختبار الصوت</button>
+        <button class="btn" onclick="manualRefresh()" style="margin-top:6px;background:#3b82f6">🔄 تحديث يدوي</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📐 مستويات اليوم</div>
+        <div class="pp-box"><div style="font-size:0.75rem;color:#94a3b8">⭐ PP (النقطة المحورية)</div><div class="pp-val" id="ppSide">----</div></div>
+        <div class="indicator-row"><span style="color:#10b981">🟢 R1</span><span style="color:#10b981;font-weight:700" id="r1">----</span></div>
+        <div class="indicator-row"><span style="color:#10b981">🟢 R2</span><span style="color:#10b981;font-weight:700" id="r2">----</span></div>
+        <div class="indicator-row"><span style="color:#ef4444">🔴 S1</span><span style="color:#ef4444;font-weight:700" id="s1">----</span></div>
+        <div class="indicator-row"><span style="color:#ef4444">🔴 S2</span><span style="color:#ef4444;font-weight:700" id="s2">----</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📈 الشارت</div>
+        <div class="chart-container"><canvas id="chart"></canvas></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">🔔 سجل التنبيهات</div>
+        <div id="alerts"><div style="text-align:center;color:#94a3b8;padding:10px;font-size:0.8rem">لا توجد تنبيهات...</div></div>
+    </div>
+
+    <div class="footer">QuarryLake Pro v2.0 | بيانات Binance | للتحليل الفني فقط</div>
+
+<script>
+'''
+
+with open('/mnt/agents/output/quarrylake_v2_part1.html', 'w', encoding='utf-8') as f:
+    f.write(enhanced_html)
+
+print("Part 1 saved!")
+
+js_part2 = '''
+// ===== CORS PROXY LIST =====
+const CORS_PROXIES = [
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?',
+    'https://api.codetabs.com/v1/proxy?quest=',
+];
+
+const CFG = {symbol: 'XAUUSDT', tf: '15m', limit: 250, ema: 200, waeS: 150, waeF: 20, waeSl: 40, waeCh: 20, waeM: 2.0, vstopL: 3, vstopM: 1.5};
+let ST = {candles: [], lastSig: null, alerts: [], snd: true, proxyIndex: 0};
+
+function ema(src, p) { const k = 2 / (p + 1), r = [src[0]]; for (let i = 1; i < src.length; i++) r.push(src[i] * k + r[i - 1] * (1 - k)); return r; }
+function sma(src, p) { const r = []; for (let i = 0; i < src.length; i++) { if (i < p - 1) { r.push(null); continue } let s = 0; for (let j = 0; j < p; j++) s += src[i - j]; r.push(s / p) } return r; }
+function stdev(src, p) { const r = []; for (let i = 0; i < src.length; i++) { if (i < p - 1) { r.push(null); continue } let s = 0; for (let j = 0; j < p; j++) s += src[i - j]; const m = s / p; let v = 0; for (let j = 0; j < p; j++) v += Math.pow(src[i - j] - m, 2); r.push(Math.sqrt(v / p)) } return r; }
+function atr(h, l, c, p) { const tr = []; for (let i = 0; i < c.length; i++) tr.push(i === 0 ? h[i] - l[i] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))); return ema(tr, p); }
+function rma(src, p) { const a = 1 / p, r = [src[0]]; for (let i = 1; i < src.length; i++) r.push(a * src[i] + (1 - a) * r[i - 1]); return r; }
+
+// ===== FETCH WITH CORS PROXY =====
+async function fetchWithProxy(url) {
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+        const proxyIndex = (ST.proxyIndex + i) % CORS_PROXIES.length;
+        const proxyUrl = CORS_PROXIES[proxyIndex] + encodeURIComponent(url);
+        try {
+            const response = await fetch(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+            if (response.ok) {
+                ST.proxyIndex = proxyIndex;
+                return await response.json();
+            }
+        } catch (e) {
+            console.log('Proxy ' + proxyIndex + ' failed, trying next...');
+        }
+    }
+    throw new Error('All proxies failed');
+}
+
+async function fetchData() {
+    const statusEl = document.getElementById('connStatus');
+    statusEl.innerHTML = '<span class="loading"></span> جاري الاتصال...';
+    
+    try {
+        const url = 'https://api.binance.com/api/v3/klines?symbol=' + CFG.symbol + '&interval=' + CFG.tf + '&limit=' + CFG.limit;
+        const data = await fetchWithProxy(url);
+        
+        ST.candles = data.map(c => ({ t: c[0], o: parseFloat(c[1]), h: parseFloat(c[2]), l: parseFloat(c[3]), c: parseFloat(c[4]), v: parseFloat(c[5]) }));
+        statusEl.innerHTML = '<span style="color:#10b981">● متصل</span>';
+        return true;
+    } catch (e) {
+        console.error('Fetch error:', e);
+        statusEl.innerHTML = '<span style="color:#ef4444">● غير متصل</span>';
+        showError('فشل الاتصال بـ Binance. جرب الضغط على "تحديث يدوي".');
+        return false;
+    }
+}
+
+function showError(msg) {
+    const existing = document.querySelector('.error-box');
+    if (existing) existing.remove();
+    
+    const box = document.createElement('div');
+    box.className = 'error-box';
+    box.innerHTML = msg + '<br><button class="retry-btn" onclick="manualRefresh()">إعادة المحاولة</button>';
+    document.body.insertBefore(box, document.body.children[1]);
+}
+
+function calcWAE(cd) {
+    const cl = cd.map(x => x.c), hi = cd.map(x => x.h), lo = cd.map(x => x.l);
+    const fma = ema(cl, CFG.waeF), sma_ = ema(cl, CFG.waeSl), macd = fma.map((v, i) => v - sma_[i]);
+    const t1 = [], t2 = []; for (let i = 0; i < macd.length; i++) { t1.push(i >= 1 ? (macd[i] - macd[i - 1]) * CFG.waeS : 0); t2.push(i >= 3 ? (macd[i - 2] - macd[i - 3]) * CFG.waeS : 0) }
+    const sm = sma(cl, CFG.waeCh), sd = stdev(cl, CFG.waeCh), bbu = sm.map((v, i) => v !== null ? v + CFG.waeM * sd[i] : null), bbl = sm.map((v, i) => v !== null ? v - CFG.waeM * sd[i] : null), e1 = bbu.map((v, i) => v !== null && bbl[i] !== null ? v - bbl[i] : null);
+    const tr = []; for (let i = 0; i < cl.length; i++) tr.push(i === 0 ? hi[i] - lo[i] : Math.max(hi[i] - lo[i], Math.abs(hi[i] - cl[i - 1]), Math.abs(lo[i] - cl[i - 1])));
+    const dz = rma(tr, 100).map(v => v * 3.7);
+    const tu = t1.map(v => v >= 0 ? v : 0), td = t1.map(v => v < 0 ? -v : 0);
+    const wl = [], ws = []; for (let i = 0; i < tu.length; i++) { wl.push(tu[i] > 0 && tu[i] > dz[i] && tu[i] > (e1[i] || 0)); ws.push(td[i] > 0 && td[i] > dz[i] && td[i] > (e1[i] || 0)) }
+    return { t1, tu, td, wl, ws };
+}
+
+function calcVStop(cd) {
+    const cl = cd.map(x => x.c), hi = cd.map(x => x.h), lo = cd.map(x => x.l), at = atr(hi, lo, cl, CFG.vstopL);
+    const m1 = [], mn1 = [], iu = [], st = [], vs = [];
+    for (let i = 0; i < cl.length; i++) {
+        if (i === 0) { m1.push(cl[i]); mn1.push(cl[i]); iu.push(true); st.push(cl[i] - CFG.vstopM * at[i]); vs.push(st[i]) }
+        else {
+            m1.push(Math.max(m1[i - 1] || cl[i], cl[i])); mn1.push(Math.min(mn1[i - 1] || cl[i], cl[i]));
+            const pu = iu[i - 1], cs = pu ? m1[i] - CFG.vstopM * at[i] : mn1[i] + CFG.vstopM * at[i];
+            const pv = vs[i - 1], v1 = pu ? Math.max(pv, cs) : Math.min(pv, cs);
+            const cu = cl[i] - v1 >= 0, tc = cu !== pu;
+            iu.push(cu); st.push(cs);
+            vs.push(tc ? (cu ? cl[i] - CFG.vstopM * at[i] : cl[i] + CFG.vstopM * at[i]) : v1);
+        }
+    }
+    const vl = cl.map((c, i) => c > vs[i]), vsh = cl.map((c, i) => c < vs[i]);
+    return { vs, iu, vl, vsh };
+}
+
+function calcPP(cd) {
+    const d = cd.slice(-96); if (d.length < 2) { const lc = cd[cd.length - 1]; return { pp: lc.c, r1: lc.c * 1.001, r2: lc.c * 1.002, s1: lc.c * 0.999, s2: lc.c * 0.998 } }
+    const xh = Math.max(...d.map(x => x.h)), xl = Math.min(...d.map(x => x.l)), xc = d[d.length - 1].c;
+    const pp = (xh + xl + xc) / 3, r1 = pp + (pp - xl), s1 = pp - (xh - pp), r2 = pp + (xh - xl), s2 = pp - (xh - xl);
+    return { pp, r1, r2, s1, s2 };
+}
+
+function checkSig(cd, w, v, pp, ema) {
+    const i = cd.length - 1, p = i - 1; if (i < 5) return null;
+    const pr = cd[i].c, emaV = ema[i];
+    const wln = w.wl[i], wsn = w.ws[i], vln = v.vl[i], vsn = v.vsh[i];
+    const wlp = w.wl[p], wsp = w.ws[p], vlp = v.vl[p], vsp = v.vsh[p];
+    const abpp = pr > pp.pp, bepp = pr < pp.pp, abem = pr > emaV, bee = pr < emaV;
+    
+    if (wln && vln && abpp && abem && (!wlp || !vlp)) return { type: 'buy', price: pr, tp1: pp.r1, tp2: pp.r2, msg: 'شراء: WAE+VStop+PP+EMA200' };
+    if (wsn && vsn && bepp && bee && (!wsp || !vsp)) return { type: 'sell', price: pr, tp1: pp.s1, tp2: pp.s2, msg: 'بيع: WAE+VStop+PP+EMA200' };
+    return null;
+}
+
+let audioCtx;
+function playSnd(t) {
+    if (!ST.snd) return;
+    if (!audioCtx) audioCtx = new (window.AudioContext || webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    if (t === 'buy') { o.frequency.setValueAtTime(800, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); o.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2) }
+    else { o.frequency.setValueAtTime(600, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1); o.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.2) }
+    g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+    o.start(); o.stop(audioCtx.currentTime + 0.4);
+}
+
+function testSound() { playSnd('buy'); setTimeout(() => playSnd('sell'), 500) }
+
+function addAlert(s) {
+    const now = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    ST.alerts.unshift({ type: s.type, time: now, price: s.price.toFixed(2), msg: s.msg });
+    if (ST.alerts.length > 15) ST.alerts.pop();
+    const box = document.getElementById('alerts');
+    box.innerHTML = ST.alerts.map(a => '<div class="alert-item alert-' + a.type + '"><div style="font-size:1.1rem">' + (a.type === 'buy' ? '🚀' : '🔻') + '</div><div style="flex:1"><div style="font-weight:700">' + (a.type === 'buy' ? 'شراء' : 'بيع') + ' @ ' + a.price + '</div><div style="font-size:0.7rem;opacity:0.8">' + a.msg + '</div></div><div style="font-size:0.65rem;color:#94a3b8">' + a.time + '</div></div>').join('');
+}
+
+function drawChart(cd, pp, ema) {
+    const c = document.getElementById('chart'), x = c.getContext('2d');
+    const w = c.width = c.offsetWidth, h = c.height = c.offsetHeight;
+    x.fillStyle = '#1a1f2e'; x.fillRect(0, 0, w, h);
+    const vis = cd.slice(-50); if (vis.length < 2) return;
+    let mn = Math.min(...vis.map(v => v.l)), mx = Math.max(...vis.map(v => v.h));
+    const pd = (mx - mn) * 0.1; mn -= pd; mx += pd; const rng = mx - mn;
+    const cw = w / vis.length * 0.6, sp = w / vis.length;
+    
+    x.strokeStyle = '#2d3748'; x.lineWidth = 0.5;
+    for (let i = 0; i < 5; i++) { const y = h - (h * i / 4); x.beginPath(); x.moveTo(0, y); x.lineTo(w, y); x.stroke(); x.fillStyle = '#94a3b8'; x.font = '10px sans-serif'; x.fillText((mn + rng * i / 4).toFixed(1), 5, y - 3) }
+    
+    x.strokeStyle = '#3b82f6'; x.lineWidth = 2; x.beginPath();
+    for (let i = 0; i < vis.length; i++) { const ev = ema[cd.length - vis.length + i]; if (ev === null) continue; const px = i * sp + sp / 2, py = h - ((ev - mn) / rng) * h; if (i === 0) x.moveTo(px, py); else x.lineTo(px, py) }
+    x.stroke();
+    
+    const ppy = h - ((pp.pp - mn) / rng) * h; x.strokeStyle = '#f59e0b'; x.lineWidth = 1; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(0, ppy); x.lineTo(w, ppy); x.stroke(); x.setLineDash([]);
+    
+    for (let i = 0; i < vis.length; i++) {
+        const cd = vis[i], px = i * sp + sp / 2;
+        const oy = h - ((cd.o - mn) / rng) * h, cy = h - ((cd.c - mn) / rng) * h, hy = h - ((cd.h - mn) / rng) * h, ly = h - ((cd.l - mn) / rng) * h;
+        const gr = cd.c >= cd.o; x.strokeStyle = x.fillStyle = gr ? '#10b981' : '#ef4444';
+        x.beginPath(); x.moveTo(px, hy); x.lineTo(px, ly); x.stroke();
+        const bt = Math.min(oy, cy), bh = Math.abs(cy - oy); x.fillRect(px - cw / 2, bt, cw, Math.max(bh, 1));
+    }
+}
+
+function update() {
+    const cd = ST.candles; if (!cd.length) return;
+    const last = cd[cd.length - 1], prev = cd[cd.length - 2] || last;
+    document.getElementById('price').textContent = last.c.toFixed(2);
+    const chg = ((last.c - prev.c) / prev.c * 100);
+    const chgEl = document.getElementById('change'); chgEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%'; chgEl.className = 'price-change ' + (chg >= 0 ? 'up' : 'down');
+    document.getElementById('high').textContent = last.h.toFixed(2); document.getElementById('low').textContent = last.l.toFixed(2);
+    document.getElementById('time').textContent = new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    
+    const w = calcWAE(cd), v = calcVStop(cd), pp = calcPP(cd), ema = ema(cd.map(x => x.c), CFG.ema);
+    const i = cd.length - 1;
+    
+    const wb = document.getElementById('waeBadge'); if (w.wl[i]) { wb.textContent = 'شراء'; wb.className = 'badge bg-green' } else if (w.ws[i]) { wb.textContent = 'بيع'; wb.className = 'badge bg-red' } else { wb.textContent = 'انتظار'; wb.className = 'badge bg-neutral' }
+    const vb = document.getElementById('vstopBadge'); if (v.vl[i]) { vb.textContent = 'صاعد'; vb.className = 'badge bg-green' } else if (v.vsh[i]) { vb.textContent = 'هابط'; vb.className = 'badge bg-red' } else { vb.textContent = 'انتظار'; vb.className = 'badge bg-neutral' }
+    
+    document.getElementById('ppVal').textContent = pp.pp.toFixed(2); document.getElementById('ppSide').textContent = pp.pp.toFixed(2);
+    const pb = document.getElementById('ppBadge'); pb.textContent = last.c > pp.pp ? 'فوق ✅' : 'تحت ❌'; pb.className = 'badge ' + (last.c > pp.pp ? 'bg-green' : 'bg-red');
+    document.getElementById('emaVal').textContent = ema[i].toFixed(2);
+    const eb = document.getElementById('emaBadge'); eb.textContent = last.c > ema[i] ? 'فوق ✅' : 'تحت ❌'; eb.className = 'badge ' + (last.c > ema[i] ? 'bg-green' : 'bg-red');
+    
+    document.getElementById('r1').textContent = pp.r1.toFixed(2); document.getElementById('r2').textContent = pp.r2.toFixed(2);
+    document.getElementById('s1').textContent = pp.s1.toFixed(2); document.getElementById('s2').textContent = pp.s2.toFixed(2);
+    
+    const sig = checkSig(cd, w, v, pp, ema);
+    const box = document.getElementById('sigBox'), icon = document.getElementById('sigIcon'), title = document.getElementById('sigTitle'), tgs = document.getElementById('targets'), dots = document.getElementById('dots');
+    
+    if (sig && sig.type !== ST.lastSig) {
+        ST.lastSig = sig.type; playSnd(sig.type); addAlert(sig);
+        if (sig.type === 'buy') {
+            box.className = 'signal-box buy-signal'; icon.textContent = '🚀'; title.textContent = 'إشارة شراء!'; title.style.color = '#10b981';
+            document.getElementById('tp1').textContent = sig.tp1.toFixed(2); document.getElementById('tp2').textContent = sig.tp2.toFixed(2);
+            document.getElementById('tp1').className = 'target-val green-text'; document.getElementById('tp2').className = 'target-val green-text';
+            tgs.style.display = 'grid'; dots.innerHTML = '<span class="dot d-green"></span><span class="dot d-green"></span><span class="dot d-green"></span>';
+        } else {
+            box.className = 'signal-box sell-signal'; icon.textContent = '🔻'; title.textContent = 'إشارة بيع!'; title.style.color = '#ef4444';
+            document.getElementById('tp1').textContent = sig.tp1.toFixed(2); document.getElementById('tp2').textContent = sig.tp2.toFixed(2);
+            document.getElementById('tp1').className = 'target-val red-text'; document.getElementById('tp2').className = 'target-val red-text';
+            tgs.style.display = 'grid'; dots.innerHTML = '<span class="dot d-red"></span><span class="dot d-red"></span><span class="dot d-red"></span>';
+        }
+    } else if (!sig) {
+        box.className = 'signal-box waiting'; icon.textContent = '⏳'; title.textContent = 'في انتظار الإشارة...'; title.style.color = '';
+        tgs.style.display = 'none'; dots.innerHTML = '<span class="dot d-white"></span><span class="dot d-white"></span><span class="dot d-white"></span>';
+    }
+    
+    drawChart(cd, pp, ema);
+    
+    const errBox = document.querySelector('.error-box');
+    if (errBox) errBox.remove();
+}
+
+function chgSym() {
+    const s = document.getElementById('symbol').value; CFG.symbol = s;
+    const n = { XAUUSDT: ['XAUUSDT - الذهب', '🥇'], XAGUSDT: ['XAGUSDT - الفضة', '🥈'] };
+    const info = n[s];
+    document.getElementById('symName').textContent = info[0];
+    ST.lastSig = null; fetchData().then(() => update());
+}
+
+function chgTf() {
+    CFG.tf = document.getElementById('tf').value; ST.lastSig = null;
+    fetchData().then(() => update());
+}
+
+async function manualRefresh() {
+    ST.proxyIndex = 0;
+    const success = await fetchData();
+    if (success) update();
+}
+
+async function main() {
+    const success = await fetchData();
+    if (success) update();
+}
+
+main();
+setInterval(main, 15000);
+
+window.addEventListener('resize', () => {
+    if (ST.candles.length > 0) {
+        const pp = calcPP(ST.candles), ema = ema(ST.candles.map(x => x.c), CFG.ema);
+        drawChart(ST.candles, pp, ema);
+    }
+});
+</script>
+</body>
+</html>'''
+
+# Combine parts
+with open('/mnt/agents/output/quarrylake_v2_part1.html', 'r', encoding='utf-8') as f:
+    part1 = f.read()
+
+full_html = part1 + js_part2
+
+with open('/mnt/agents/output/quarrylake_v2.html', 'w', encoding='utf-8') as f:
+    f.write(full_html)
+
+print(f"QuarryLake v2 saved! Size: {len(full_html)} chars")
